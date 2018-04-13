@@ -111,21 +111,20 @@ static void edit_params(u32 argc, char** argv) {
   name = strrchr(argv[0], '/');
   if (!name) name = argv[0]; else name++;
 
-  if (!strcmp(name, "afl-clang-fast++")) {
+  if (!strcmp(name, "afl-clang-hextype++")) {
     u8* alt_cxx = getenv("AFL_CXX");
-    snprintf(compiler_path, sizeof compiler_path, "%s%s", hextype_dir, "clang");
+    snprintf(compiler_path, sizeof compiler_path, "%s/%s", hextype_dir, "clang++");
     cc_params[0] = alt_cxx ? alt_cxx : compiler_path;
+
+    cc_params[cc_par_cnt++] = "-fsanitize=hextype";
+    cc_params[cc_par_cnt++] = "-mllvm";
+    cc_params[cc_par_cnt++] = "-create-clang-typeinfo";
+
   } else {
     u8* alt_cc = getenv("AFL_CC");
-    snprintf(compiler_path, sizeof compiler_path, "%s%s", hextype_dir, "clang");
+    snprintf(compiler_path, sizeof compiler_path, "%s/%s", hextype_dir, "clang");
     cc_params[0] = alt_cc ? alt_cc : compiler_path;
   }
-
-  cc_params[cc_par_cnt++] = "-fsanitize=hextype";
-  cc_params[cc_par_cnt++] = "-mllvm";
-  cc_params[cc_par_cnt++] = "-create-clang-typeinfo";
-  cc_params[cc_par_cnt++] = "-lstdc++";
-
 
   /* There are two ways to compile afl-clang-fast. In the traditional mode, we
      use afl-llvm-pass.so to inject instrumentation. In the experimental
@@ -138,6 +137,7 @@ static void edit_params(u32 argc, char** argv) {
   cc_params[cc_par_cnt++] = "-fsanitize-coverage=trace-pc-guard";
   cc_params[cc_par_cnt++] = "-mllvm";
   cc_params[cc_par_cnt++] = "-sanitizer-coverage-block-threshold=0";
+  cc_params[cc_par_cnt++] = alloc_printf("%s/afl-llvm-pass.so", obj_path);
 #else
   cc_params[cc_par_cnt++] = "-Xclang";
   cc_params[cc_par_cnt++] = "-load";
@@ -331,9 +331,9 @@ int main(int argc, char** argv) {
   if (isatty(2) && !getenv("AFL_QUIET")) {
 
 #ifdef USE_TRACE_PC
-    SAYF(cCYA "afl-clang-fast [tpcg] " cBRI VERSION  cRST " by <lszekeres@google.com>\n");
+    SAYF(cCYA "afl-clang-hextype [tpcg] " cBRI VERSION  cRST " by <terrycwk1994@gmail.com>\n");
 #else
-    SAYF(cCYA "afl-clang-fast " cBRI VERSION  cRST " by <lszekeres@google.com>\n");
+    SAYF(cCYA "afl-clang-hextype " cBRI VERSION  cRST " by <terrycwk1994@gmail.com>\n");
 #endif /* ^USE_TRACE_PC */
 
   }
@@ -341,18 +341,7 @@ int main(int argc, char** argv) {
   if (argc < 2) {
 
     SAYF("\n"
-         "This is a helper application for afl-fuzz. It serves as a drop-in replacement\n"
-         "for clang, letting you recompile third-party code with the required runtime\n"
-         "instrumentation. A common use pattern would be one of the following:\n\n"
-
-         "  CC=%s/afl-clang-fast ./configure\n"
-         "  CXX=%s/afl-clang-fast++ ./configure\n\n"
-
-         "In contrast to the traditional afl-clang tool, this version is implemented as\n"
-         "an LLVM pass and tends to offer improved performance with slow programs.\n\n"
-
-         "You can specify custom next-stage toolchain via AFL_CC and AFL_CXX. Setting\n"
-         "AFL_HARDEN enables hardening optimizations in the compiled code.\n\n",
+         "This is a afl-fuzz wrapper for the Hextype Clang compiler.\n\n"
          BIN_PATH, BIN_PATH);
 
     exit(1);
